@@ -3,9 +3,11 @@ package main
 import (
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/insanjati/fitbyte/internal/database"
 	"github.com/insanjati/fitbyte/internal/handler"
+	"github.com/insanjati/fitbyte/internal/middleware"
 	"github.com/insanjati/fitbyte/internal/repository"
 	"github.com/insanjati/fitbyte/internal/service"
 
@@ -17,6 +19,11 @@ import (
 type Config struct {
 	HTTPPort    string `env:"HTTP_PORT" envDefault:"8080"`
 	DatabaseURL string `env:"DATABASE_URL"`
+
+	// JWT Configuration
+	JWTSecret   string        `env:"JWT_SECRET" envDefault:"your-secret-key"`
+	JWTDuration time.Duration `env:"JWT_DURATION" envDefault:"24h"`
+	JWTIssuer   string        `env:"JWT_ISSUER" envDefault:"fitbyte-app"`
 }
 
 func main() {
@@ -33,10 +40,21 @@ func main() {
 	}
 	defer db.Close()
 
+	// Initialize JWT service
+	jwtConfig := &service.SecurityConfig{
+		Key:    cfg.JWTSecret,
+		Durasi: cfg.JWTDuration,
+		Issues: cfg.JWTIssuer,
+	}
+	jwtService := service.NewJwtService(jwtConfig)
+
 	// Initialize layers
 	userRepo := repository.NewUserRepository(db)
 	userService := service.NewUserService(userRepo)
 	userHandler := handler.NewUserHandler(userService)
+
+	// Initialize middleware
+	authMiddleware := middleware.NewAuthMiddleware(jwtService)
 
 	// Setup Gin router
 	r := gin.Default()
@@ -45,7 +63,13 @@ func main() {
 	v1 := r.Group("/api/v1")
 	{
 		v1.GET("/health", healthCheckHandler(db))
-		v1.GET("/users", userHandler.GetUsers)
+		v1.GET("/users", userHandler.GetUsers) // Public route for testing
+	}
+
+	protected := v1.Group("/")
+	protected.Use(authMiddleware.CheckToken())
+	{
+		// protected.GET("/u", userHandler.GetUsers) // test middleware
 	}
 
 	// Start server

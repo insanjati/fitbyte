@@ -21,3 +21,4 @@ func (s *UserService) GetAllUsers() ([]model.User, error) {
 
 	return users, nil
 }
+

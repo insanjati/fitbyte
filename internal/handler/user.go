@@ -25,3 +25,13 @@ func (h *UserHandler) GetUsers(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"data": users})
 }
+// func (h *UserHandler) CreateNewUser(c *gin.Context){
+// 	requestC, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+// 	defer cancel()
+
+// 	var payload model.User
+// 	if err := c.ShouldBindJSON(&payload); err != nil{
+		
+// 		return
+// 	}
+// }

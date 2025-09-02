@@ -3,6 +3,7 @@ package handler
 import (
 	"net/http"
 
+	"github.com/insanjati/fitbyte/internal/model"
 	"github.com/insanjati/fitbyte/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -25,13 +26,23 @@ func (h *UserHandler) GetUsers(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"data": users})
 }
-// func (h *UserHandler) CreateNewUser(c *gin.Context){
-// 	requestC, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
-// 	defer cancel()
+func (h *UserHandler) CreateNewUser(c *gin.Context) {
+// Validate input
+var payload model.User
+if err := c.ShouldBindJSON(&payload); err != nil{
+	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error() + "Test2"})
+	return
+}
 
-// 	var payload model.User
-// 	if err := c.ShouldBindJSON(&payload); err != nil{
-		
-// 		return
-// 	}
-// }
+
+
+data, err := h.userService.RegisterNewUser(c, payload)
+	if err != nil{
+	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error() + "Test1"})
+	return
+}
+		c.JSON(http.StatusOK, gin.H{"success": data})
+
+// Email's format
+// Password Length
+}

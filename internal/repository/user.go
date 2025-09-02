@@ -4,7 +4,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/insanjati/fitbyte/internal/model"
-	"github.com/insanjati/fitbyte/internal/utils"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -37,13 +36,9 @@ func (r *UserRepository) GetAll() ([]model.User, error) {
 	return users, nil
 }
 
-func (r *UserRepository) Register(c *gin.Context, payload model.User) (model.User, error){
+func (r *UserRepository) RegisterNewUser(c *gin.Context, payload model.User) (model.User, error){
 	newId := uuid.Must(uuid.NewV7())
 	var user model.User
-
-	//Hash Password
-	hashedPassword, _ := utils.NewPasswordHasher().EncryptPassword(payload.Password)
-	payload.Password = hashedPassword
 
 	//Insert user
 	query := `INSERT INTO Users(id, name, email, password) VALUES($1, $2, $3, $4) RETURNING id, name, email`
@@ -64,3 +59,18 @@ func (r *UserRepository) Register(c *gin.Context, payload model.User) (model.Use
 // 	emailRegex := regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 // 	return emailRegex.MatchString(e)
 // }
+
+func (r *UserRepository) GetUserByEmail(c *gin.Context, email string) (model.User, error){
+	var user model.User
+
+	query := `SELECT id, name, email, password FROM users WHERE email=$1`
+	err := r.db.QueryRowContext(c, query).Scan(&user.ID, &user.Name, &user.Email, &user.Password)
+
+	if err != nil{
+		if c.Err() != nil{
+			return model.User{}, c.Err()
+		}
+		return model.User{}, err
+	}
+	return user, nil
+}

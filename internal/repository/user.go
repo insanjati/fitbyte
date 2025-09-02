@@ -14,22 +14,35 @@ func NewUserRepository(db *sqlx.DB) *UserRepository {
 	return &UserRepository{db: db}
 }
 
-func (r *UserRepository) GetAll() ([]model.User, error) {
-	query := `SELECT id, name, email, created_at, updated_at FROM users ORDER BY id`
+func (r *UserRepository) GetAll() ([]model.UserResponse, error) {
+	query := `SELECT name, email, preference, weight_unit, height_unit, weight, height, image_uri FROM users`
 	rows, err := r.db.Query(query)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var users []model.User
+	var users []model.UserResponse
 	for rows.Next() {
-		var user model.User
-		err := rows.Scan(&user.ID, &user.Name, &user.Email, &user.CreatedAt, &user.UpdatedAt)
+		user := model.UserResponse{}
+		err := rows.Scan(
+			&user.Name,
+			&user.Email,
+			&user.Preference,
+			&user.WeightUnit,
+			&user.HeightUnit,
+			&user.Weight,
+			&user.Height,
+			&user.ImageUri,
+		)
 		if err != nil {
 			return nil, err
 		}
 		users = append(users, user)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
 	}
 
 	return users, nil

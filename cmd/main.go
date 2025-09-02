@@ -48,10 +48,15 @@ func main() {
 	}
 	jwtService := service.NewJwtService(jwtConfig)
 
-	// Initialize layers
+	// Initialize users layers
 	userRepo := repository.NewUserRepository(db)
 	userService := service.NewUserService(userRepo)
 	userHandler := handler.NewUserHandler(userService)
+
+	// Initialize activities layers
+	activityRepo := repository.NewActivityRepository(db)
+	activityService := service.NewActivityService(activityRepo)
+	activityHandler := handler.NewActivityHandler(activityService)
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(jwtService)
@@ -70,6 +75,14 @@ func main() {
 	protected.Use(authMiddleware.CheckToken())
 	{
 		// protected.GET("/u", userHandler.GetUsers) // test middleware
+	}
+
+	dummy := v1.Group("/")
+	dummy.Use(middleware.DummyAuthMiddleware())
+	{
+		dummy.POST("/activity", activityHandler.CreateActivity)
+		dummy.GET("/activity", activityHandler.GetUserActivities)
+		// dummy.GET("/u", userHandler.GetUsers) // test middleware
 	}
 
 	// Start server

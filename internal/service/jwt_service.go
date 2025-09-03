@@ -5,11 +5,12 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"github.com/insanjati/fitbyte/internal/model"
 )
 
 type JwtService interface {
-	GenerateToken(payload *model.User) (string, error)
+	GenerateToken(payload *model.AuthRequest) (string, error)
 	VerifyToken(tokenString string) (jwt.MapClaims, error)
 }
 
@@ -26,11 +27,11 @@ type jwtService struct {
 // Custom claims untuk JWT
 type JwtTokenClaims struct {
 	jwt.RegisteredClaims
-	UserId int `json:"user_id"`
+	UserId uuid.UUID `json:"user_id"`
 }
 
 // GenerateToken implements JwtService.
-func (j *jwtService) GenerateToken(payload *model.User) (string, error) {
+func (j *jwtService) GenerateToken(payload *model.AuthRequest) (string, error) {
 	claims := JwtTokenClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    j.config.Issues,

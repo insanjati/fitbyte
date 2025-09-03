@@ -1,9 +1,9 @@
 package service
 
 import (
+	"context"
 	"fmt"
 
-	"github.com/gin-gonic/gin"
 	"github.com/insanjati/fitbyte/internal/model"
 	"github.com/insanjati/fitbyte/internal/repository"
 	"github.com/insanjati/fitbyte/internal/utils"
@@ -11,10 +11,14 @@ import (
 
 type UserService struct {
 	userRepo *repository.UserRepository
+	userUtils utils.PasswordHasher
+	jwtService JwtService
 }
 
-func NewUserService(userRepo *repository.UserRepository) *UserService {
-	return &UserService{userRepo: userRepo}
+func NewUserService(userRepo *repository.UserRepository, jwt JwtService) *UserService {
+	return &UserService{userRepo: userRepo,
+						userUtils: utils.NewPasswordHasher(),
+						jwtService: jwt}
 }
 
 func (s *UserService) GetAllUsers() ([]model.User, error) {
@@ -27,30 +31,67 @@ func (s *UserService) GetAllUsers() ([]model.User, error) {
 }
 
 
-func (s *UserService) RegisterNewUser(c *gin.Context, payload model.User) (model.User, error) {
+func (s *UserService) RegisterNewUser(ctx context.Context, payload model.AuthRequest) (model.AuthResponse, error) {
 	// Business Logiv
 	// Check if email exists Import get email function
-	user, err := s.userRepo.GetUserByEmail(c, payload.Email)
-	if user.ID != 0 {
-		return model.User{}, fmt.Errorf("Email already Exists")
-	} 
-	if err != nil{
-		return model.User{}, c.Err()
-	}
+
+	// user, err := s.userRepo.GetUserByEmail(ctx, payload.Email)
+	// if err != nil{
+	// 	return model.User{}, ctx.Err()
+	// }
+	// if user.ID == "" {
+	// 	return model.User{}, fmt.Errorf("Email already Exists")
+	// } 
 	// Hash Password
-	payload.Password, _ = utils.NewPasswordHasher().EncryptPassword(payload.Password)
 
-	// Get Email only
-	createdUser, err := s.userRepo.RegisterNewUser(c, payload)
+	hashedPassword, err := s.userUtils.EncryptPassword(payload.Password)
 	if err != nil {
-		if c.Err() != nil{
-			return model.User{}, c.Err()
+		return model.AuthResponse{}, fmt.Errorf("failed to encrypt password: %v", err)
+	}
+	payload.Password = hashedPassword
+	// fmt.Println(hashedPassword)
+	// Payload exists here
+	createdUser, err := s.userRepo.RegisterNewUser(ctx, payload)
+	if err != nil {
+		if ctx.Err() != nil{
+			return model.AuthResponse{}, fmt.Errorf("Error" + ctx.Err().Error())
 		}
-		return model.User{}, fmt.Errorf("failed to create user: %v", err)
+		return model.AuthResponse{}, fmt.Errorf("failed to create user: %v", err)
 	}
 
-	return createdUser, nil
+	
+
+	token, err := s.jwtService.GenerateToken(&payload)
+	if err != nil{
+		return model.AuthResponse{}, fmt.Errorf("failed to create user: %v", err)
+	}
+
+
+	return model.AuthResponse{Email: createdUser.Email, Token:  token}, nil
 }
 
-// Function is email valid()
+func (s *UserService) Login(ctx context.Context, payload model.AuthRequest) (model.AuthResponse, error){
 
+	if payload.Email == ""{
+		return model.AuthResponse{}, fmt.Errorf("Email is Required")
+	}
+	if payload.Password == ""{
+		return model.AuthResponse{}, fmt.Errorf("Password is Required")
+	}
+
+	fmt.Println(payload.Email)
+	user, err := s.userRepo.GetUserByEmail(ctx, payload.Email)
+	if err != nil{
+		return model.AuthResponse{}, fmt.Errorf(err.Error())
+	}
+
+	if err:= s.userUtils.ComparePasswordHash(user.Password, payload.Password); err!=nil{
+		return model.AuthResponse{}, fmt.Errorf("invalid credentials - password")
+	}
+
+	token, err:= s.jwtService.GenerateToken(&payload)
+	if err!=nil{
+		return model.AuthResponse{}, fmt.Errorf("failed to ")
+	}
+	return model.AuthResponse{Email: payload.Email, Token: token}, nil
+}

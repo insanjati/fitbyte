@@ -1,15 +1,15 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
-	"fmt"
 
 	"github.com/insanjati/fitbyte/internal/middleware"
 	"github.com/insanjati/fitbyte/internal/model"
 	"github.com/insanjati/fitbyte/internal/service"
-	
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -41,7 +41,7 @@ func (h *ActivityHandler) CreateActivity(c *gin.Context) {
 
 	activity, err := h.activityService.CreateActivity(userID, req)
 	fmt.Print(err)
-	
+
 	if err != nil {
 		if err.Error() == "invalid doneAt" {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid doneAt"})
@@ -66,13 +66,11 @@ func (h *ActivityHandler) CreateActivity(c *gin.Context) {
 	})
 }
 
-// GET /v1/activity
 func (h *ActivityHandler) GetUserActivities(c *gin.Context) {
 	userID := getUserID(c)
 
 	var filter model.ActivityFilter
 
-	// Manual parsing to enforce defaults and ignore invalid
 	if v := c.Query("limit"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n > 0 {
 			filter.Limit = &n

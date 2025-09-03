@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/insanjati/fitbyte/internal/service"
 )
 
@@ -18,7 +19,6 @@ type authMiddleware struct {
 
 func (a *authMiddleware) CheckToken() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		// Check if Authorization header exists
 		header := ctx.GetHeader("Authorization")
 		if header == "" {
 			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
@@ -65,8 +65,25 @@ func (a *authMiddleware) CheckToken() gin.HandlerFunc {
 			return
 		}
 
-		// Set user context
-		ctx.Set("user_id", claims["user_id"])
+		uidStr, ok := claims["user_id"].(string)
+		if !ok {
+			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"error":   "Unauthorized",
+				"message": "Invalid user ID type",
+			})
+			return
+		}
+
+		uid, err := uuid.Parse(uidStr)
+		if err != nil {
+			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"error":   "Unauthorized",
+				"message": "Invalid UUID format",
+			})
+			return
+		}
+
+		ctx.Set("user_id", uid)
 		ctx.Next()
 	}
 }

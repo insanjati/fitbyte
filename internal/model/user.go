@@ -31,3 +31,13 @@ type UserResponse struct {
 	Height     *float64 `json:"height"`
 	ImageUri   *string  `json:"imageUri"`
 }
+
+type UpdateUserRequest struct {
+	Name       *string  `json:"name"`
+	Preference *string  `json:"preference" validate:"required,oneof=CARDIO WEIGHT"`
+	WeightUnit *string  `json:"weightUnit" validate:"required,oneof=KG LBS"`
+	HeightUnit *string  `json:"heightUnit" validate:"required,oneof=CM INCH"`
+	Weight     *float64 `json:"weight" validate:"required,gte=10,lte=1000"`
+	Height     *float64 `json:"height" validate:"required,gte=3,lte=250"`
+	ImageUri   *string  `json:"imageUri"`
+}

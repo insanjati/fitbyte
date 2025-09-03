@@ -70,6 +70,7 @@ func main() {
 	protected.Use(authMiddleware.CheckToken())
 	{
 		// protected.GET("/u", userHandler.GetUsers) // test middleware
+		protected.PATCH("/users", userHandler.UpdateUser)
 	}
 
 	// Start server

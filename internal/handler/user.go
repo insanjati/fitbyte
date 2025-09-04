@@ -36,7 +36,7 @@ func (h *UserHandler) CreateNewUser(c *gin.Context) {
 
 
 	// Validate input
-	var payload model.AuthRequest
+	var payload model.User
 
 
 	if err := c.ShouldBindJSON(&payload); err != nil{
@@ -69,7 +69,7 @@ func (h *UserHandler) CreateNewUser(c *gin.Context) {
 }
 
 func (h *UserHandler) Login(c *gin.Context){
-	var payload model.AuthRequest
+	var payload model.User
 
 	if err := c.ShouldBindJSON(&payload); err != nil{
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

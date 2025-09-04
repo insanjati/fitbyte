@@ -31,7 +31,7 @@ func (s *UserService) GetAllUsers() ([]model.User, error) {
 }
 
 
-func (s *UserService) RegisterNewUser(ctx context.Context, payload model.AuthRequest) (model.AuthResponse, error) {
+func (s *UserService) RegisterNewUser(ctx context.Context, payload model.User) (model.AuthResponse, error) {
 	// Business Logiv
 	// Check if email exists Import get email function
 
@@ -49,7 +49,6 @@ func (s *UserService) RegisterNewUser(ctx context.Context, payload model.AuthReq
 		return model.AuthResponse{}, fmt.Errorf("failed to encrypt password: %v", err)
 	}
 	payload.Password = hashedPassword
-	// fmt.Println(hashedPassword)
 	// Payload exists here
 	createdUser, err := s.userRepo.RegisterNewUser(ctx, payload)
 	if err != nil {
@@ -61,7 +60,7 @@ func (s *UserService) RegisterNewUser(ctx context.Context, payload model.AuthReq
 
 	
 
-	token, err := s.jwtService.GenerateToken(&payload)
+	token, err := s.jwtService.GenerateToken(&createdUser)
 	if err != nil{
 		return model.AuthResponse{}, fmt.Errorf("failed to create user: %v", err)
 	}
@@ -70,7 +69,7 @@ func (s *UserService) RegisterNewUser(ctx context.Context, payload model.AuthReq
 	return model.AuthResponse{Email: createdUser.Email, Token:  token}, nil
 }
 
-func (s *UserService) Login(ctx context.Context, payload model.AuthRequest) (model.AuthResponse, error){
+func (s *UserService) Login(ctx context.Context, payload model.User) (model.AuthResponse, error){
 
 	if payload.Email == ""{
 		return model.AuthResponse{}, fmt.Errorf("Email is Required")
@@ -89,7 +88,7 @@ func (s *UserService) Login(ctx context.Context, payload model.AuthRequest) (mod
 		return model.AuthResponse{}, fmt.Errorf("invalid credentials - password")
 	}
 
-	token, err:= s.jwtService.GenerateToken(&payload)
+	token, err:= s.jwtService.GenerateToken(&user)
 	if err!=nil{
 		return model.AuthResponse{}, fmt.Errorf("failed to ")
 	}

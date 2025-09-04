@@ -40,7 +40,7 @@ func (r *UserRepository) GetAll() ([]model.User, error) {
 }
 
 // Repository for doing CRUD
-func (r *UserRepository) RegisterNewUser(c context.Context, payload model.AuthRequest) (model.User, error){
+func (r *UserRepository) RegisterNewUser(c context.Context, payload model.User) (model.User, error){
 	newId := uuid.New().String() // generate ID with UUID
 
 	var user model.User //Assign user variable with model.User type

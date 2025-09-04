@@ -2,6 +2,8 @@ package model
 
 import (
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type ActivityType string
@@ -33,7 +35,7 @@ var ActivityTypeCalories = map[ActivityType]int{
 }
 
 type Activity struct {
-	ID                string       `json:"activityId" db:"id"`
+	ID                uuid.UUID    `json:"activityId" db:"id"`
 	UserID            int          `json:"userId" db:"user_id"`
 	ActivityType      ActivityType `json:"activityType" db:"activity_type"`
 	DoneAt            time.Time    `json:"doneAt" db:"done_at"`

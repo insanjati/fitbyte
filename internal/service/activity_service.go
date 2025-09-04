@@ -6,7 +6,7 @@ import (
 
 	"github.com/insanjati/fitbyte/internal/model"
 	"github.com/insanjati/fitbyte/internal/repository"
-	
+
 	"github.com/google/uuid"
 )
 
@@ -45,7 +45,7 @@ func (s *ActivityService) CreateActivity(userID int, req model.CreateActivityReq
 	}
 
 	activity := &model.Activity{
-		ID:                uuid.New().String(),
+		ID:                uuid.New(),
 		UserID:            userID,
 		ActivityType:      req.ActivityType,
 		DoneAt:            doneAt,

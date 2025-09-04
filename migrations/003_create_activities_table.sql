@@ -16,7 +16,7 @@
 DROP TABLE IF EXISTS activities;
 
 CREATE TABLE activities (
-    id TEXT PRIMARY KEY,
+    id UUID PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     activity_type VARCHAR(50) NOT NULL CHECK (activity_type IN ('Walking', 'Yoga', 'Stretching', 'Cycling', 'Swimming', 'Dancing', 'Hiking', 'Running', 'HIIT', 'JumpRope')),
     done_at TIMESTAMP WITH TIME ZONE NOT NULL,

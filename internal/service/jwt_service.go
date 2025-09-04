@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"github.com/insanjati/fitbyte/internal/model"
 )
 
@@ -26,7 +27,7 @@ type jwtService struct {
 // Custom claims untuk JWT
 type JwtTokenClaims struct {
 	jwt.RegisteredClaims
-	UserId int `json:"user_id"`
+	UserId uuid.UUID `json:"user_id"`
 }
 
 // GenerateToken implements JwtService.

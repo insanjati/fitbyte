@@ -1,8 +1,11 @@
 package handler
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"regexp"
+	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
@@ -41,6 +44,7 @@ func (h *UserHandler) GetUsers(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": users})
+
 }
 
 func (h *UserHandler) UpdateUser(c *gin.Context) {
@@ -81,13 +85,79 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		}
 	}
 
-	// lanjut ke service kalau valid
-	userID := uuid.MustParse(c.Param("id"))
+	uid, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	userID, ok := uid.(uuid.UUID)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID type"})
+		return
+	}
 	updatedUser, err := h.userService.UpdateUser(userID, &req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
 		return
 	}
 
 	c.JSON(http.StatusOK, updatedUser)
+}
+
+func (h *UserHandler) CreateNewUser(c *gin.Context) {
+	requestCtx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
+	// Validate input
+	var payload model.User
+
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if !isEmailValid(payload.Email) {
+		c.JSON(http.StatusInternalServerError, gin.H{"warning": "Email's format incorrect"})
+		return
+
+	}
+
+	if len(payload.Password) > 32 || len(payload.Password) < 8 {
+		c.JSON(http.StatusInternalServerError, gin.H{"warning": "Your Password length must be between 8 characters and 32 characters"})
+		return
+	}
+	user, err := h.userService.RegisterNewUser(requestCtx, payload)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if requestCtx.Err() != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": requestCtx.Err()})
+	}
+	c.JSON(http.StatusOK, gin.H{"success": user})
+
+	// Email's format
+	// Password Length
+}
+
+func (h *UserHandler) Login(c *gin.Context) {
+	var payload model.User
+
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	user, err := h.userService.Login(c, payload)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"Success": user})
+}
+
+func isEmailValid(e string) bool {
+	emailRegex := regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$`)
+	return emailRegex.MatchString(e)
 }

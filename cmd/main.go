@@ -50,7 +50,7 @@ func main() {
 
 	// Initialize layers
 	userRepo := repository.NewUserRepository(db)
-	userService := service.NewUserService(userRepo)
+	userService := service.NewUserService(userRepo, jwtService)
 	userHandler := handler.NewUserHandler(userService)
 
 	// Initialize middleware
@@ -64,6 +64,8 @@ func main() {
 	{
 		v1.GET("/health", healthCheckHandler(db))
 		v1.GET("/users", userHandler.GetUsers) // Public route for testing
+		v1.POST("/register", userHandler.CreateNewUser) // Public route for testing
+		v1.POST("/login", userHandler.Login) // Public route for testing
 	}
 
 	protected := v1.Group("/")

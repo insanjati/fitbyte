@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/insanjati/fitbyte/internal/model"
 
 	"github.com/google/uuid"

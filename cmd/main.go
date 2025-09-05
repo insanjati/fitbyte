@@ -76,10 +76,12 @@ func main() {
 	protected := v1.Group("/")
 	protected.Use(authMiddleware.CheckToken())
 	{
-		// protected.GET("/u", userHandler.GetUsers) // test middleware
-		protected.GET("/users", userHandler.GetUsers)
-		protected.POST("/activity", activityHandler.CreateActivity)
 		protected.PATCH("/users", userHandler.UpdateUser)
+		protected.GET("/users", userHandler.GetUsers)
+
+		protected.POST("/activity", activityHandler.CreateActivity)
+		protected.GET("/activity", activityHandler.GetUserActivities)
+		protected.PATCH("/activity/:activityId", activityHandler.UpdateActivity)
 		protected.DELETE("/activity/:activityId", activityHandler.DeleteActivity)
 	}
 

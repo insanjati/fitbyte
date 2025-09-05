@@ -80,9 +80,9 @@ func (h *ActivityHandler) CreateActivity(c *gin.Context) {
 }
 
 func (h *ActivityHandler) GetUserActivities(c *gin.Context) {
-	userID := getUserID(c)
-	if userID == uuid.Nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user ID"})
+	userID, err := getUserID(c)
+	if err == errors.ErrUnauthorized {
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors.ErrUnauthorized.Error()})
 		return
 	}
 
@@ -213,9 +213,9 @@ func (h *ActivityHandler) DeleteActivity(c *gin.Context) {
 	}
 
 	// Get user ID from JWT context
-	userID := getUserID(c)
-	if userID == uuid.Nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user ID"})
+	userID, err := getUserID(c)
+	if err == errors.ErrUnauthorized {
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors.ErrUnauthorized.Error()})
 		return
 	}
 

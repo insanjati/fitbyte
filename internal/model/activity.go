@@ -2,6 +2,8 @@ package model
 
 import (
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type ActivityType string
@@ -33,8 +35,8 @@ var ActivityTypeCalories = map[ActivityType]int{
 }
 
 type Activity struct {
-	ID                string       `json:"activityId" db:"id"`
-	UserID            int          `json:"userId" db:"user_id"`
+	ID                uuid.UUID    `json:"activityId" db:"id"`
+	UserID            uuid.UUID    `json:"userId" db:"user_id"`
 	ActivityType      ActivityType `json:"activityType" db:"activity_type"`
 	DoneAt            time.Time    `json:"doneAt" db:"done_at"`
 	DurationInMinutes int          `json:"durationInMinutes" db:"duration_in_minutes"`
@@ -52,7 +54,7 @@ type CreateActivityRequest struct {
 type UpdateActivityRequest struct {
 	ActivityType      *ActivityType `json:"activityType"`
 	DoneAt            *string       `json:"doneAt"`
-	DurationInMinutes *int          `json:"durationInMinutes" binding:"onitemempty,min=1"`
+	DurationInMinutes *int          `json:"durationInMinutes" binding:"omitempty,min=1"`
 }
 
 type ActivityFilter struct {

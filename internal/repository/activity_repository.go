@@ -2,11 +2,12 @@ package repository
 
 import (
 	"fmt"
-	"time"
 	"strings"
+	"time"
 
 	"github.com/insanjati/fitbyte/internal/model"
-	
+
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -16,6 +17,48 @@ type ActivityRepository struct {
 
 func NewActivityRepository(db *sqlx.DB) *ActivityRepository {
 	return &ActivityRepository{db: db}
+}
+
+func (r *ActivityRepository) CheckExistedUserById(id uuid.UUID) (bool, error) {
+	query := `SELECT 1 FROM users WHERE id = $1`
+
+	var exists int
+	err := r.db.QueryRow(query, id).Scan(&exists)
+
+	// Log query, id, and result
+	fmt.Printf("CheckExistedUserById | Query: %s | ID: %s | Result: %d | Error: %v\n",
+		query, id.String(), exists, err)
+
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func (r *ActivityRepository) CheckActivityOwnership(userID uuid.UUID, activityID uuid.UUID) (*model.Activity, error) {
+	query := `SELECT * FROM activities WHERE id = $1 AND user_id = $2`
+
+	var activity model.Activity
+	err := r.db.QueryRow(query, activityID, userID).Scan(
+		&activity.ID,
+		&activity.UserID,
+		&activity.ActivityType,
+		&activity.DoneAt,
+		&activity.DurationInMinutes,
+		&activity.CaloriesBurned,
+		&activity.CreatedAt,
+		&activity.UpdatedAt,
+	)
+
+	// Log query
+	fmt.Printf("CheckActivityOwnership | Query: %s | userID: %s | activityID: %s\n", query, userID, activityID)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &activity, nil
 }
 
 func (r *ActivityRepository) CreateActivity(activity *model.Activity) error {
@@ -37,7 +80,7 @@ func (r *ActivityRepository) CreateActivity(activity *model.Activity) error {
 	return err
 }
 
-func (r *ActivityRepository) GetUserActivities(userID int, filter *model.ActivityFilter) ([]model.Activity, error) {
+func (r *ActivityRepository) GetUserActivities(userID uuid.UUID, filter *model.ActivityFilter) ([]model.Activity, error) {
 	query := `
 		SELECT id, user_id, activity_type, done_at, duration_in_minutes, calories_burned, created_at, updated_at
 		FROM activities 
@@ -121,4 +164,75 @@ func (r *ActivityRepository) GetUserActivities(userID int, filter *model.Activit
 	}
 
 	return activities, nil
+}
+
+func (r *ActivityRepository) UpdateActivity(userID uuid.UUID, activityID uuid.UUID, updatedAt time.Time, req *model.UpdateActivityRequest, caloriesBurned int) (*model.Activity, error) {
+	query := `
+		UPDATE activities
+		SET updated_at = $1
+	`
+
+	args := []interface{}{updatedAt}
+	argIndex := 2
+
+	fields := []string{}
+
+	if req.ActivityType != nil {
+		fields = append(fields, fmt.Sprintf(" activity_type = $%d", argIndex))
+		args = append(args, *req.ActivityType)
+		argIndex++
+	}
+
+	if req.DoneAt != nil {
+		fields = append(fields, fmt.Sprintf(" done_at = $%d", argIndex))
+		args = append(args, *req.DoneAt)
+		argIndex++
+	}
+
+	if req.DurationInMinutes != nil {
+		fields = append(fields, fmt.Sprintf(" duration_in_minutes = $%d", argIndex))
+		args = append(args, *req.DurationInMinutes)
+		argIndex++
+	}
+
+	fields = append(fields, fmt.Sprintf(" calories_burned = $%d", argIndex))
+	args = append(args, caloriesBurned)
+	argIndex++
+
+	// If no fields are set, there's nothing to update (mending di service ndak sih)
+	if len(fields) == 0 {
+		// nothing to update
+		return nil, nil
+	}
+
+	// Join fields for SET clause
+	if len(fields) > 0 {
+		query += ", " + strings.Join(fields, ", ")
+	}
+
+	// Add WHERE clause
+	query += fmt.Sprintf(" WHERE user_id = $%d AND id = $%d RETURNING id, user_id, activity_type, done_at, duration_in_minutes, calories_burned, created_at, updated_at", argIndex, argIndex+1)
+	// Log query
+	fmt.Printf("UpdateActivity | Query: %s | userID: %s | activityID: %s\n", query, userID, activityID)
+	args = append(args, userID, activityID)
+
+	// ini nanti ganti QueryRowContext (Get ni sama ndak kek QueryRow?)
+	var activity model.Activity
+	row := r.db.QueryRow(query, args...)
+	err := row.Scan(
+		&activity.ID,
+		&activity.UserID,
+		&activity.ActivityType,
+		&activity.DoneAt,
+		&activity.DurationInMinutes,
+		&activity.CaloriesBurned,
+		&activity.CreatedAt,
+		&activity.UpdatedAt,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &activity, nil
 }

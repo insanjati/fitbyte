@@ -68,15 +68,16 @@ func main() {
 	v1 := r.Group("/api/v1")
 	{
 		v1.GET("/health", healthCheckHandler(db))
-		v1.GET("/users", userHandler.GetUsers) // Public route for testing
-		v1.POST("/register", userHandler.CreateNewUser) // Public route for testing
-		v1.POST("/login", userHandler.Login) // Public route for testing
+
+		v1.POST("/register", userHandler.CreateNewUser)
+		v1.POST("/login", userHandler.Login)
 	}
 
 	protected := v1.Group("/")
 	protected.Use(authMiddleware.CheckToken())
 	{
-		// protected.GET("/u", userHandler.GetUsers) // test middleware
+		protected.PATCH("/users", userHandler.UpdateUser)
+		protected.GET("/users", userHandler.GetUsers)
 	}
 
 	dummy := v1.Group("/")

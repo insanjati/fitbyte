@@ -10,7 +10,7 @@ import (
 )
 
 type JwtService interface {
-	GenerateToken(payload *model.AuthRequest) (string, error)
+	GenerateToken(payload *model.User) (string, error)
 	VerifyToken(tokenString string) (jwt.MapClaims, error)
 }
 
@@ -31,7 +31,7 @@ type JwtTokenClaims struct {
 }
 
 // GenerateToken implements JwtService.
-func (j *jwtService) GenerateToken(payload *model.AuthRequest) (string, error) {
+func (j *jwtService) GenerateToken(payload *model.User) (string, error) {
 	claims := JwtTokenClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    j.config.Issues,

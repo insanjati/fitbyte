@@ -31,7 +31,7 @@ func (s *ActivityService) calculateCalories(activityType model.ActivityType, dur
 	return calsPerMinute * durationInMinutes, nil
 }
 
-func (s *ActivityService) CreateActivity(userID int, req model.CreateActivityRequest) (*model.Activity, error) {
+func (s *ActivityService) CreateActivity(userID uuid.UUID, req model.CreateActivityRequest) (*model.Activity, error) {
 	// Validate and parse doneAt
 	doneAt, err := time.Parse(time.RFC3339, req.DoneAt)
 	if err != nil {
@@ -61,6 +61,10 @@ func (s *ActivityService) CreateActivity(userID int, req model.CreateActivityReq
 	return activity, nil
 }
 
-func (s *ActivityService) GetUserActivities(userID int, filter *model.ActivityFilter) ([]model.Activity, error) {
+func (s *ActivityService) GetUserActivities(userID uuid.UUID, filter *model.ActivityFilter) ([]model.Activity, error) {
 	return s.activityRepo.GetUserActivities(userID, filter)
+}
+
+func (s *ActivityService) DeleteActivity(activityID uuid.UUID, userID uuid.UUID) error {
+	return s.activityRepo.DeleteActivity(activityID, userID)
 }

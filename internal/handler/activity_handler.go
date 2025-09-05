@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/insanjati/fitbyte/internal/middleware"
+	"github.com/google/uuid"
 	"github.com/insanjati/fitbyte/internal/model"
 	"github.com/insanjati/fitbyte/internal/service"
 
@@ -21,12 +21,12 @@ func NewActivityHandler(activityService *service.ActivityService) *ActivityHandl
 	return &ActivityHandler{activityService: activityService}
 }
 
-func getUserID(c *gin.Context) int {
-	val, _ := c.Get(middleware.ContextUserIDKey)
-	if id, ok := val.(int); ok {
+func getUserID(c *gin.Context) uuid.UUID {
+	val, _ := c.Get("user_id")
+	if id, ok := val.(uuid.UUID); ok {
 		return id
 	}
-	return 0
+	return uuid.Nil
 }
 
 // POST /v1/activity
@@ -38,6 +38,10 @@ func (h *ActivityHandler) CreateActivity(c *gin.Context) {
 	}
 
 	userID := getUserID(c)
+	if userID == uuid.Nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user ID"})
+		return
+	}
 
 	activity, err := h.activityService.CreateActivity(userID, req)
 	fmt.Print(err)
@@ -68,6 +72,10 @@ func (h *ActivityHandler) CreateActivity(c *gin.Context) {
 
 func (h *ActivityHandler) GetUserActivities(c *gin.Context) {
 	userID := getUserID(c)
+	if userID == uuid.Nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user ID"})
+		return
+	}
 
 	var filter model.ActivityFilter
 
@@ -127,4 +135,35 @@ func (h *ActivityHandler) GetUserActivities(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, resp)
+}
+
+// DELETE /v1/activity/:activityId
+func (h *ActivityHandler) DeleteActivity(c *gin.Context) {
+	// Get activity ID from URL parameter
+	activityIDStr := c.Param("activityId")
+	activityID, err := uuid.Parse(activityIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid activity ID format"})
+		return
+	}
+
+	// Get user ID from JWT context
+	userID := getUserID(c)
+	if userID == uuid.Nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user ID"})
+		return
+	}
+
+	// Delete the activity
+	err = h.activityService.DeleteActivity(activityID, userID)
+	if err != nil {
+		if err.Error() == "activity not found" {
+			c.JSON(http.StatusNotFound, gin.H{"error": "activity not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "deleted"})
 }

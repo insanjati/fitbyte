@@ -80,13 +80,10 @@ func main() {
 		protected.GET("/users", userHandler.GetUsers)
 	}
 
-	dummy := v1.Group("/")
-	dummy.Use(middleware.DummyAuthMiddleware())
-	{
-		dummy.POST("/activity", activityHandler.CreateActivity)
-		dummy.GET("/activity", activityHandler.GetUserActivities)
-		// dummy.GET("/u", userHandler.GetUsers) // test middleware
-	}
+	// Activity routes with proper JWT authentication
+	protected.POST("/activity", activityHandler.CreateActivity)
+	protected.GET("/activity", activityHandler.GetUserActivities)
+	protected.DELETE("/activity/:activityId", activityHandler.DeleteActivity)
 
 	// Start server
 	log.Printf("Server starting on port %s", cfg.HTTPPort)

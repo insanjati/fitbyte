@@ -1,12 +1,14 @@
 package repository
 
 import (
+	"errors"
 	"fmt"
-	"time"
 	"strings"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/insanjati/fitbyte/internal/model"
-	
+
 	"github.com/jmoiron/sqlx"
 )
 
@@ -37,7 +39,7 @@ func (r *ActivityRepository) CreateActivity(activity *model.Activity) error {
 	return err
 }
 
-func (r *ActivityRepository) GetUserActivities(userID int, filter *model.ActivityFilter) ([]model.Activity, error) {
+func (r *ActivityRepository) GetUserActivities(userID uuid.UUID, filter *model.ActivityFilter) ([]model.Activity, error) {
 	query := `
 		SELECT id, user_id, activity_type, done_at, duration_in_minutes, calories_burned, created_at, updated_at
 		FROM activities 
@@ -121,4 +123,27 @@ func (r *ActivityRepository) GetUserActivities(userID int, filter *model.Activit
 	}
 
 	return activities, nil
+}
+
+func (r *ActivityRepository) DeleteActivity(activityID uuid.UUID, userID uuid.UUID) error {
+	query := `
+		DELETE FROM activities 
+		WHERE id = $1 AND user_id = $2
+	`
+
+	result, err := r.db.Exec(query, activityID, userID)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return errors.New("activity not found")
+	}
+
+	return nil
 }

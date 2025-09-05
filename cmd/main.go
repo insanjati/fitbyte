@@ -48,10 +48,15 @@ func main() {
 	}
 	jwtService := service.NewJwtService(jwtConfig)
 
-	// Initialize layers
+	// Initialize users layers
 	userRepo := repository.NewUserRepository(db)
 	userService := service.NewUserService(userRepo, jwtService)
 	userHandler := handler.NewUserHandler(userService)
+
+	// Initialize activities layers
+	activityRepo := repository.NewActivityRepository(db)
+	activityService := service.NewActivityService(activityRepo)
+	activityHandler := handler.NewActivityHandler(activityService)
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(jwtService)
@@ -73,6 +78,11 @@ func main() {
 	{
 		protected.PATCH("/users", userHandler.UpdateUser)
 		protected.GET("/users", userHandler.GetUsers)
+
+		protected.POST("/activity", activityHandler.CreateActivity)
+		protected.GET("/activity", activityHandler.GetUserActivities)
+		protected.PATCH("/activity/:activityId", activityHandler.UpdateActivity)
+		protected.DELETE("/activity/:activityId", activityHandler.DeleteActivity)
 	}
 
 	// Start server

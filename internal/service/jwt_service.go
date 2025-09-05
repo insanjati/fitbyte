@@ -4,9 +4,10 @@ import (
 	"errors"
 	"time"
 
+	"github.com/insanjati/fitbyte/internal/model"
+	
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/insanjati/fitbyte/internal/model"
 )
 
 type JwtService interface {

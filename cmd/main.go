@@ -78,10 +78,9 @@ func main() {
 	{
 		// protected.GET("/u", userHandler.GetUsers) // test middleware
 		protected.GET("/users", userHandler.GetUsers)
-		protected.PATCH("/users", userHandler.UpdateUser)
 		protected.POST("/activity", activityHandler.CreateActivity)
-		protected.GET("/activity", activityHandler.GetUserActivities)
-		protected.PATCH("/activity/:activityId", activityHandler.UpdateActivity)
+		protected.PATCH("/users", userHandler.UpdateUser)
+		protected.DELETE("/activity/:activityId", activityHandler.DeleteActivity)
 	}
 
 	// Start server

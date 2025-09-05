@@ -79,13 +79,15 @@ func (h *ActivityHandler) CreateActivity(c *gin.Context) {
 	})
 }
 
-// GET /v1/activity
 func (h *ActivityHandler) GetUserActivities(c *gin.Context) {
-	userID, err := getUserID(c)
+	userID := getUserID(c)
+	if userID == uuid.Nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user ID"})
+		return
+	}
 
 	var filter model.ActivityFilter
 
-	// Manual parsing to enforce defaults and ignore invalid
 	if v := c.Query("limit"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n > 0 {
 			filter.Limit = &n
@@ -198,4 +200,35 @@ func (h *ActivityHandler) UpdateActivity(c *gin.Context) {
 		"createdAt":         activity.CreatedAt.Format(time.RFC3339),
 		"updatedAt":         activity.UpdatedAt.Format(time.RFC3339),
 	})
+}
+
+// DELETE /v1/activity/:activityId
+func (h *ActivityHandler) DeleteActivity(c *gin.Context) {
+	// Get activity ID from URL parameter
+	activityIDStr := c.Param("activityId")
+	activityID, err := uuid.Parse(activityIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid activity ID format"})
+		return
+	}
+
+	// Get user ID from JWT context
+	userID := getUserID(c)
+	if userID == uuid.Nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user ID"})
+		return
+	}
+
+	// Delete the activity
+	err = h.activityService.DeleteActivity(activityID, userID)
+	if err != nil {
+		if err.Error() == "activity not found" {
+			c.JSON(http.StatusNotFound, gin.H{"error": "activity not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "deleted"})
 }

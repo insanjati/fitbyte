@@ -1,10 +1,12 @@
 package repository
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/insanjati/fitbyte/internal/model"
 
 	"github.com/google/uuid"
@@ -235,4 +237,27 @@ func (r *ActivityRepository) UpdateActivity(userID uuid.UUID, activityID uuid.UU
 	}
 
 	return &activity, nil
+}
+
+func (r *ActivityRepository) DeleteActivity(activityID uuid.UUID, userID uuid.UUID) error {
+	query := `
+		DELETE FROM activities 
+		WHERE id = $1 AND user_id = $2
+	`
+
+	result, err := r.db.Exec(query, activityID, userID)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return errors.New("activity not found")
+	}
+
+	return nil
 }

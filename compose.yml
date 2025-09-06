@@ -12,8 +12,9 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./migrations:/docker-entrypoint-initdb.d/01-migrations
-      - ./seeds:/docker-entrypoint-initdb.d/02-seeds
+      - ./migrations:/docker-entrypoint-initdb.d
+      # - ./migrations:/docker-entrypoint-initdb.d/01-migrations
+      # - ./seeds:/docker-entrypoint-initdb.d/02-seeds
     networks:
       - fitbyte-network
     healthcheck:

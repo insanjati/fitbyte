@@ -24,4 +24,5 @@ Thumbs.db
 
 # Database and files
 postgres_data
-uploads
+redis_data
+dev_note.md

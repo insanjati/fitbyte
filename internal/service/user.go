@@ -1,31 +1,31 @@
 package service
 
 import (
-	"encoding/json"
+	"context"
 	"errors"
+	"fmt"
+	"log"
 	"time"
 
-	"context"
-	"fmt"
-
-	"github.com/google/uuid"
-
+	"github.com/insanjati/fitbyte/internal/cache"
 	"github.com/insanjati/fitbyte/internal/model"
 	"github.com/insanjati/fitbyte/internal/repository"
 	"github.com/insanjati/fitbyte/internal/utils"
+
+	"github.com/google/uuid"
 )
 
 type UserService struct {
 	userRepo   *repository.UserRepository
-	cacheRepo  repository.CacheRepository
+	cache      *cache.Redis
 	userUtils  utils.PasswordHasher
 	jwtService JwtService
 }
 
-func NewUserService(userRepo *repository.UserRepository, cache repository.CacheRepository, jwt JwtService) *UserService {
+func NewUserService(userRepo *repository.UserRepository, cache *cache.Redis, jwt JwtService) *UserService {
 	return &UserService{
 		userRepo:   userRepo,
-		cacheRepo:  cache,
+		cache:      cache,
 		userUtils:  utils.NewPasswordHasher(),
 		jwtService: jwt,
 	}
@@ -35,11 +35,10 @@ func (s *UserService) FindUserById(userId uuid.UUID) (*model.UserResponse, error
 	ctx := context.Background()
 	cacheKey := fmt.Sprintf("user:id:%s", userId.String())
 
-	if cached, err := s.cacheRepo.Get(ctx, cacheKey); err == nil && cached != "" {
-		var user model.UserResponse
-		if err := json.Unmarshal([]byte(cached), &user); err == nil {
-			return &user, nil
-		}
+	// Try cache first using GetAs
+	var cachedUser model.UserResponse
+	if err := s.cache.GetAs(ctx, cacheKey, &cachedUser); err == nil {
+		return &cachedUser, nil
 	}
 
 	user, err := s.userRepo.GetUserById(userId)
@@ -47,7 +46,7 @@ func (s *UserService) FindUserById(userId uuid.UUID) (*model.UserResponse, error
 		return nil, err
 	}
 
-	_ = s.cacheRepo.Set(ctx, cacheKey, user, 10*time.Minute)
+	_ = s.cache.Set(ctx, cacheKey, user, 10*time.Minute)
 
 	return user, nil
 }
@@ -73,12 +72,12 @@ func (s *UserService) UpdateUser(userId uuid.UUID, user *model.UpdateUserRequest
 		return nil, err
 	}
 
-	if err := s.cacheRepo.Delete(ctx, cacheKey); err != nil {
-		fmt.Println("WARN: gagal hapus cache key", cacheKey, err)
+	if err := s.cache.Delete(ctx, cacheKey); err != nil {
+		log.Printf("WARN: failed to invalidate cache for user %s: %v", userId, err)
 	}
 
-	if err := s.cacheRepo.Set(ctx, cacheKey, updated, 10*time.Minute); err != nil {
-		fmt.Println("WARN: gagal set cache key", cacheKey, err)
+	if err := s.cache.SetExp(context.Background(), cacheKey, updated, 10*time.Minute); err != nil {
+		log.Printf("WARN: failed to cache updated user %s: %v", userId, err)
 	}
 
 	return updated, nil
@@ -102,44 +101,45 @@ func (s *UserService) RegisterNewUser(ctx context.Context, payload model.User) (
 		return model.AuthResponse{}, fmt.Errorf("failed to encrypt password: %v", err)
 	}
 	payload.Password = hashedPassword
+
 	// Payload exists here
 	createdUser, err := s.userRepo.RegisterNewUser(ctx, payload)
 	if err != nil {
 		if ctx.Err() != nil {
-			return model.AuthResponse{}, fmt.Errorf("Error" + ctx.Err().Error())
+			return model.AuthResponse{}, fmt.Errorf("context error: %v", ctx.Err())
 		}
 		return model.AuthResponse{}, fmt.Errorf("failed to create user: %v", err)
 	}
 
 	token, err := s.jwtService.GenerateToken(&createdUser)
 	if err != nil {
-		return model.AuthResponse{}, fmt.Errorf("failed to create user: %v", err)
+		return model.AuthResponse{}, fmt.Errorf("failed to generate token: %v", err)
 	}
 
 	return model.AuthResponse{Email: createdUser.Email, Token: token}, nil
 }
 
 func (s *UserService) Login(ctx context.Context, payload model.User) (model.AuthResponse, error) {
-
 	if payload.Email == "" {
-		return model.AuthResponse{}, fmt.Errorf("Email is Required")
+		return model.AuthResponse{}, fmt.Errorf("email is required")
 	}
 	if payload.Password == "" {
-		return model.AuthResponse{}, fmt.Errorf("Password is Required")
+		return model.AuthResponse{}, fmt.Errorf("password is required")
 	}
 
 	user, err := s.userRepo.GetUserByEmail(ctx, payload.Email)
 	if err != nil {
-		return model.AuthResponse{}, fmt.Errorf(err.Error())
+		return model.AuthResponse{}, fmt.Errorf("user not found")
 	}
 
 	if err := s.userUtils.ComparePasswordHash(user.Password, payload.Password); err != nil {
-		return model.AuthResponse{}, fmt.Errorf("invalid credentials - password")
+		return model.AuthResponse{}, fmt.Errorf("invalid credentials")
 	}
 
 	token, err := s.jwtService.GenerateToken(&user)
 	if err != nil {
-		return model.AuthResponse{}, fmt.Errorf("failed to ")
+		return model.AuthResponse{}, fmt.Errorf("failed to generate token: %v", err)
 	}
+
 	return model.AuthResponse{Email: payload.Email, Token: token}, nil
 }

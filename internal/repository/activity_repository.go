@@ -105,7 +105,7 @@ func (r *ActivityRepository) GetUserActivities(userID uuid.UUID, filter *model.A
 	if filter.DoneAtFrom != nil {
 		doneAtFrom, err := time.Parse(time.RFC3339, *filter.DoneAtFrom)
 		if err == nil {
-			conditions = append(conditions, fmt.Sprintf("done_at >= $%d", argIndex))
+			conditions = append(conditions, fmt.Sprintf("done_at_from >= $%d", argIndex))
 			args = append(args, doneAtFrom)
 			argIndex++
 		}
@@ -115,7 +115,7 @@ func (r *ActivityRepository) GetUserActivities(userID uuid.UUID, filter *model.A
 	if filter.DoneAtTo != nil {
 		doneAtTo, err := time.Parse(time.RFC3339, *filter.DoneAtTo)
 		if err == nil {
-			conditions = append(conditions, fmt.Sprintf("done_at <= $%d", argIndex))
+			conditions = append(conditions, fmt.Sprintf("done_at_to <= $%d", argIndex))
 			args = append(args, doneAtTo)
 			argIndex++
 		}

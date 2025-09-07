@@ -16,7 +16,7 @@ services:
     networks:
       - fitbyte-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER} -d ${PG_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -69,7 +69,7 @@ services:
     container_name: fitbyte-app
     env_file: .env
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+      DATABASE_URL: postgres://${PG_USER}:${PG_PASSWORD}@postgres:5432/${PG_DB}?sslmode=disable
       HTTP_PORT: ${HTTP_PORT}
       JWT_SECRET: ${JWT_SECRET}
       JWT_DURATION: ${JWT_DURATION}

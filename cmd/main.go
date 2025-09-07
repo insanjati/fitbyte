@@ -96,7 +96,7 @@ func main() {
 
 	// Initialize activities layers
 	activityRepo := repository.NewActivityRepository(db)
-	activityService := service.NewActivityService(activityRepo)
+	activityService := service.NewActivityService(activityRepo, cache)
 	activityHandler := handler.NewActivityHandler(activityService)
 
 	// Initialize file handler

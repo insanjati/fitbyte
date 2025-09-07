@@ -48,7 +48,7 @@ func (h *ActivityHandler) CreateActivity(c *gin.Context) {
 		return
 	}
 
-	activity, err := h.activityService.CreateActivity(userID, req)
+	activity, err := h.activityService.CreateActivity(c, userID, req)
 
 	if err != nil {
 		fmt.Printf("CreateActivity error: %v\n", err)
@@ -125,7 +125,7 @@ func (h *ActivityHandler) GetUserActivities(c *gin.Context) {
 		}
 	}
 
-	activities, err := h.activityService.GetUserActivities(userID, &filter)
+	activities, err := h.activityService.GetUserActivities(c, userID, &filter)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
 		return
@@ -171,7 +171,7 @@ func (h *ActivityHandler) UpdateActivity(c *gin.Context) {
 		return
 	}
 
-	activity, err := h.activityService.UpdateActivity(userID, activityID, req)
+	activity, err := h.activityService.UpdateActivity(c, userID, activityID, req)
 	fmt.Print(err)
 
 	if err != nil {
@@ -220,7 +220,7 @@ func (h *ActivityHandler) DeleteActivity(c *gin.Context) {
 	}
 
 	// Delete the activity
-	err = h.activityService.DeleteActivity(activityID, userID)
+	err = h.activityService.DeleteActivity(c, activityID, userID)
 	if err != nil {
 		if err.Error() == "activity not found" {
 			c.JSON(http.StatusNotFound, gin.H{"error": "activity not found"})

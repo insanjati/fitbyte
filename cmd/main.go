@@ -1,7 +1,12 @@
 package main
 
 import (
+	"context"
 	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/insanjati/fitbyte/internal/cache"
@@ -62,6 +67,12 @@ func main() {
 		DB:       cfg.RedisDB,
 	})
 
+	defer func() {
+		if err := redisClient.Close(); err != nil {
+			log.Printf("Error closing Redis connection: %v", err)
+		}
+	}()
+
 	cache, err := cache.NewRedis(cache.RedisConfig{DB: redisClient})
 	if err != nil {
 		log.Fatal("Failed to initialize Redis cache:", err)
@@ -84,7 +95,10 @@ func main() {
 		PublicEndpoint: cfg.MinIOPublicEndpoint,
 		UseSSL:         cfg.MinIOUseSSL,
 	}
-	minioStorage := storage.NewMinIOStorage(minioConfig)
+	minioStorage, err := storage.NewMinIOStorage(minioConfig)
+	if err != nil {
+		log.Fatal("Failed to initialize MinIO storage:", err)
+	}
 
 	// Initialize health handler
 	healthHandler := handler.NewHealthHandler(db, cache)
@@ -130,8 +144,34 @@ func main() {
 		protected.POST("/file", fileHandler.UploadFile)
 	}
 
-	log.Printf("Server starting on port %s", cfg.HTTPPort)
-	if err := r.Run(":" + cfg.HTTPPort); err != nil {
-		log.Fatal("Failed to start server:", err)
+	// Create HTTP server
+	srv := &http.Server{
+		Addr:    ":" + cfg.HTTPPort,
+		Handler: r,
 	}
+
+	// Start server in a goroutine
+	go func() {
+		log.Printf("Server starting on port %s", cfg.HTTPPort)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Failed to start server: %v", err)
+		}
+	}()
+
+	// Wait for interrupt signal for graceful shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	log.Println("Shutting down server...")
+
+	// Give 30 seconds for graceful shutdown
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// Shutdown server
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Printf("Server forced to shutdown: %v", err)
+	}
+
+	log.Println("Server exited")
 }

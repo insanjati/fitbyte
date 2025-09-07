@@ -26,13 +26,13 @@ type MinIOStorage struct {
 	config *MinIOConfig
 }
 
-func NewMinIOStorage(config *MinIOConfig) *MinIOStorage {
+func NewMinIOStorage(config *MinIOConfig) (*MinIOStorage, error) {
 	client, err := minio.New(config.Endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(config.AccessKey, config.SecretKey, ""),
 		Secure: config.UseSSL,
 	})
 	if err != nil {
-		panic(fmt.Sprintf("Failed to initialize MinIO client: %v", err))
+		return nil, fmt.Errorf("failed to initialize MinIO client: %w", err)
 	}
 
 	storage := &MinIOStorage{
@@ -41,24 +41,28 @@ func NewMinIOStorage(config *MinIOConfig) *MinIOStorage {
 	}
 
 	// Create bucket if it doesn't exist
-	storage.ensureBucket()
+	if err := storage.ensureBucket(); err != nil {
+		return nil, fmt.Errorf("failed to ensure bucket exists: %w", err)
+	}
 
-	return storage
+	return storage, nil
 }
 
-func (s *MinIOStorage) ensureBucket() {
+func (s *MinIOStorage) ensureBucket() error {
 	ctx := context.Background()
 	exists, err := s.client.BucketExists(ctx, s.config.BucketName)
 	if err != nil {
-		panic(fmt.Sprintf("Error checking bucket existence: %v", err))
+		return fmt.Errorf("error checking bucket existence: %w", err)
 	}
 
 	if !exists {
 		err = s.client.MakeBucket(ctx, s.config.BucketName, minio.MakeBucketOptions{})
 		if err != nil {
-			panic(fmt.Sprintf("Error creating bucket: %v", err))
+			return fmt.Errorf("error creating bucket: %w", err)
 		}
 	}
+
+	return nil
 }
 
 func (s *MinIOStorage) UploadFile(ctx context.Context, file io.Reader, header *multipart.FileHeader) (string, error) {

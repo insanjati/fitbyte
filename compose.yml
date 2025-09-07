@@ -46,7 +46,6 @@ services:
     env_file: .env
     ports:
       - "${MINIO_PORT}:9000"
-      - "${MINIO_CONSOLE_PORT}:9001" # Remove console port for production
     environment:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
@@ -63,9 +62,7 @@ services:
       retries: 3
   
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: us-west1-docker.pkg.dev/projectsprint-000001/ps-docker-repo/machinist/fitbyte@sha256:b2d079b66d9f1bf75d92d41a0b80ff3d75f9dd3ff46080bc30957bd713f9b933
     container_name: fitbyte-app
     env_file: .env
     environment:
